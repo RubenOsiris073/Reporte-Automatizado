@@ -10,21 +10,25 @@ class CredentialsManager:
     def get_credentials_path():
         """
         Obtiene la ruta de las credenciales según el entorno:
-        - Desarrollo: usar credentials.json local
+        - Desarrollo: usar credentials.json local O variable de entorno
         - Producción: crear archivo temporal desde variable de entorno
         """
         # Verificar si estamos en Railway (producción)
         if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('ENVIRONMENT') == 'production':
             return CredentialsManager._create_temp_credentials()
         else:
-            # Entorno local - usar archivo credentials.json
+            # Entorno local - preferir archivo credentials.json, luego variable de entorno
             credentials_file = Path(__file__).parent / 'credentials.json'
             if credentials_file.exists():
                 return str(credentials_file)
+            elif os.getenv('GOOGLE_CREDENTIALS_JSON'):
+                # Si existe la variable de entorno, usarla (para desarrollo con .env)
+                return CredentialsManager._create_temp_credentials()
             else:
                 raise FileNotFoundError(
-                    "No se encontró credentials.json. "
-                    "Para desarrollo local, coloca el archivo en la raíz del proyecto."
+                    "No se encontró credentials.json ni GOOGLE_CREDENTIALS_JSON. "
+                    "Para desarrollo local, coloca el archivo credentials.json en la raíz del proyecto "
+                    "o configura GOOGLE_CREDENTIALS_JSON en el archivo .env"
                 )
     
     @staticmethod

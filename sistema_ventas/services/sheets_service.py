@@ -19,6 +19,12 @@ from ..core.exceptions import (
 )
 from ..config import settings
 
+# Importar el CredentialsManager para Railway
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from credentials_manager import CredentialsManager
+
 
 class SheetsService(SheetsServiceInterface):
     """
@@ -57,21 +63,25 @@ class SheetsService(SheetsServiceInterface):
         try:
             print(f"Conectando con Google Sheets: {nombre_hoja}")
 
-            # Verificar que existe el archivo de credenciales
-            credentials_path = self.config.get_credentials_path()
-            if not credentials_path.exists():
-                raise SheetsAuthenticationError(
-                    f"Archivo de credenciales no encontrado: {credentials_path}",
-                    error_code="CREDENTIALS_FILE_NOT_FOUND",
-                    details={"path": str(credentials_path)}
+            # Usar el nuevo sistema de credenciales para Railway
+            try:
+                credentials_path = CredentialsManager.get_credentials_path()
+                scope = self.config.SCOPES
+                creds = Credentials.from_service_account_file(
+                    credentials_path,
+                    scopes=scope
                 )
-
-            # Configurar credenciales
-            scope = self.config.SCOPES
-            creds = Credentials.from_service_account_file(
-                str(credentials_path),
-                scopes=scope
-            )
+                
+                # Limpiar archivo temporal si existe
+                if 'temp' in credentials_path:
+                    self._temp_credentials_file = credentials_path
+                
+            except Exception as e:
+                raise SheetsAuthenticationError(
+                    f"Error de autenticación con Google Sheets: {str(e)}",
+                    error_code="SHEETS_AUTH_ERROR",
+                    details={"error": str(e)}
+                )
 
             # Autorizar y conectar
             self.gc = gspread.authorize(creds)
@@ -498,3 +508,11 @@ class SheetsService(SheetsServiceInterface):
             bool: True si hay conexión activa
         """
         return self.gc is not None and self.sheet is not None
+
+    def __del__(self):
+        """Limpieza automática del archivo temporal de credenciales"""
+        if hasattr(self, '_temp_credentials_file'):
+            try:
+                CredentialsManager.cleanup_temp_file(self._temp_credentials_file)
+            except Exception:
+                pass  # Ignorar errores de limpieza

@@ -29,10 +29,19 @@ def verificar_variables_entorno():
         'GOOGLE_CREDENTIALS_JSON'
     ]
     
+    variables_opcionales_ia = [
+        'OLLAMA_URL',
+        'OLLAMA_MODEL',
+        'GEMINI_API_KEY',
+        'OPENAI_API_KEY',
+        'ANTHROPIC_API_KEY'
+    ]
+    
     variables_faltantes = []
     
     print("🔍 Verificando variables de entorno...")
     
+    # Variables requeridas
     for var in variables_requeridas:
         valor = os.getenv(var)
         if not valor:
@@ -44,6 +53,24 @@ def verificar_variables_entorno():
                 print(f"✅ {var}: [OCULTO]")
             else:
                 print(f"✅ {var}: {valor}")
+    
+    # Variables opcionales de IA
+    print("\n🤖 Verificando configuración de IA (opcional)...")
+    ai_configurada = False
+    
+    for var in variables_opcionales_ia:
+        valor = os.getenv(var)
+        if valor:
+            ai_configurada = True
+            if 'API_KEY' in var:
+                print(f"✅ {var}: [CONFIGURADA]")
+            else:
+                print(f"✅ {var}: {valor}")
+        else:
+            print(f"⭕ {var}: No configurada (opcional)")
+    
+    if not ai_configurada:
+        print("ℹ️  Sin IA configurada - se usará análisis tradicional")
     
     return variables_faltantes
 

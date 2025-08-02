@@ -25,8 +25,7 @@ from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from google.oauth2.service_account import Credentials
 from credentials_manager import CredentialsManager
-from email.mime.application import MIMEApplication
-from google.oauth2.service_account import Credentials
+from ollama_service import AdaptiveAIService
 
 # Cargar variables de entorno
 load_dotenv()
@@ -302,6 +301,9 @@ class DataAnalyzer:
                     'peor_mes': str(ventas_mensuales.idxmin())
                 }
 
+            # NUEVO: Análisis con IA
+            self._generar_analisis_ia()
+
             return True
 
         except Exception:
@@ -355,6 +357,70 @@ class DataAnalyzer:
             print(f"\nANÁLISIS TEMPORAL:")
             print(f"   Mejor período: {t.get('mejor_mes', 'N/A')}")
             print(f"   Menor rendimiento: {t.get('peor_mes', 'N/A')}")
+
+        # Mostrar análisis IA si está disponible
+        if 'analisis_ia' in self.resumen:
+            ai_data = self.resumen['analisis_ia']
+            print(f"\n🤖 ANÁLISIS CON IA:")
+            print(f"   Método: {ai_data.get('ai_method', 'N/A')}")
+            print(f"   Estado: {ai_data.get('status', 'N/A')}")
+            if ai_data.get('ai_available', False):
+                print(f"   Modelo: {ai_data.get('model_used', 'N/A')}")
+                print("\n" + ai_data.get('analysis', ''))
+            else:
+                print("\n" + ai_data.get('analysis', ''))
+
+    def _generar_analisis_ia(self):
+        """Genera análisis con IA usando el servicio adaptativo"""
+        try:
+            # Preparar datos para IA
+            datos_para_ia = {}
+            
+            if 'metricas_ventas' in self.resumen:
+                mv = self.resumen['metricas_ventas']
+                datos_para_ia.update({
+                    'ventas_totales': mv.get('ventas_totales', 0),
+                    'total_transacciones': mv.get('num_transacciones', 0),
+                    'ticket_promedio': mv.get('ticket_promedio', 0)
+                })
+            
+            if 'info_basica' in self.resumen:
+                periodo = self.resumen['info_basica'].get('periodo', 'Período actual')
+                datos_para_ia['periodo'] = periodo
+            
+            if 'top_productos' in self.resumen:
+                # Convertir dict a lista de productos
+                top_dict = self.resumen['top_productos']
+                productos_lista = []
+                for nombre, ventas in list(top_dict.items())[:5]:
+                    productos_lista.append({
+                        'nombre': nombre,
+                        'ventas': ventas
+                    })
+                datos_para_ia['top_productos'] = productos_lista
+            
+            # Inicializar servicio IA
+            ai_service = AdaptiveAIService()
+            
+            # Generar análisis
+            resultado_ia = ai_service.generar_analisis_ia(datos_para_ia)
+            
+            # Guardar resultado en resumen
+            self.resumen['analisis_ia'] = resultado_ia
+            
+            # Log del estado
+            print(f"IA: {resultado_ia.get('ai_method', 'unknown')} - {resultado_ia.get('status', 'unknown')}")
+            
+        except Exception as e:
+            # Fallback en caso de error
+            self.resumen['analisis_ia'] = {
+                'ai_method': 'error',
+                'status': 'failed',
+                'ai_available': False,
+                'analysis': f"Error en análisis IA: {str(e)}",
+                'error': str(e)
+            }
+            print(f"Error en análisis IA: {e}")
 
 
 def analisis_empresarial(nombre_hoja="DB_sales"):
