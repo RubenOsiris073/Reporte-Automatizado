@@ -1,6 +1,6 @@
 REPORTE EMPRESARIAL DE ANÁLISIS DE VENTAS
 Generado por: Sistema Empresarial de Análisis de Ventas v1.0.0
-Fecha: 2025-08-01 23:59:30
+Fecha: 2025-08-02 00:13:24
 ============================================================
 
 RESUMEN EJECUTIVO
@@ -12,13 +12,13 @@ Transacciones: 22,668
 
 ANÁLISIS ESTRATÉGICO CON IA
 ------------------------------
-🔍 ANÁLISIS TRADICIONAL
+🔍 ANÁLISIS BÁSICO (Ollama no disponible)
 
 ✅ Excelente rendimiento en ventas totales
 💰 Ticket promedio alto - clientes premium
 
 📈 RECOMENDACIONES:
-• Implementar análisis de cohortes de clientes
+• Verificar que Ollama esté ejecutándose
 • Optimizar mix de productos de alto margen
 • Desarrollar programas de retención
 • Monitorear competencia y ajustar precios

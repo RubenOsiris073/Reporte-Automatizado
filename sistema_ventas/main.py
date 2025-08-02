@@ -12,9 +12,9 @@ from typing import Optional, Dict, Any
 import sys
 import os
 
-# Agregar el directorio padre al path para importar AdaptiveAIService
+# Agregar el directorio padre al path para importar OllamaService
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ollama_service import AdaptiveAIService
+from ollama_service import OllamaService
 
 from .factories import ServiceFactory, get_complete_services
 from .core.exceptions import (
@@ -38,8 +38,8 @@ class SistemaVentasMain:
         self.services = None
         self.resumen_datos = {}
         self.analyzer_results = None
-        # Inicializar servicio de IA adaptativo
-        self.ai_service = AdaptiveAIService()
+        # Inicializar servicio de IA con Ollama
+        self.ai_service = OllamaService()
 
     @log_execution_time
     @handle_exceptions(SistemaVentasError)
@@ -190,19 +190,19 @@ class SistemaVentasMain:
     @log_execution_time
     def ejecutar_analisis_ia(self) -> Optional[str]:
         """
-        Ejecuta análisis estratégico con IA usando el servicio adaptativo.
+        Ejecuta análisis estratégico con IA usando Ollama.
 
         Returns:
             Optional[str]: Análisis de IA o None si hay error
         """
         try:
-            logger.info("Iniciando análisis estratégico con IA adaptativo...")
+            logger.info("Iniciando análisis estratégico con Ollama...")
 
             if not self.resumen_datos:
                 logger.warning("No hay datos de resumen para análisis con IA")
                 return None
 
-            # Usar el servicio adaptativo de IA
+            # Usar el servicio de Ollama
             resultado_ia = self.ai_service.generar_analisis_ia(self.resumen_datos)
             
             if resultado_ia.get('status') == 'success':
@@ -221,21 +221,21 @@ class SistemaVentasMain:
 
                 return analisis_ia
             else:
-                # Si hay error, usar el análisis tradicional incluido
-                analisis_tradicional = resultado_ia.get('analysis', '')
+                # Si hay error, usar el análisis básico incluido
+                analisis_basico = resultado_ia.get('analysis', '')
                 error = resultado_ia.get('error', 'Error desconocido')
                 
-                logger.warning(f"IA no disponible ({error}), usando análisis tradicional")
+                logger.warning(f"Ollama no disponible ({error}), usando análisis básico")
                 
-                # Mostrar análisis tradicional
-                print("\nRESULTADOS DEL ANÁLISIS (TRADICIONAL):")
+                # Mostrar análisis básico
+                print("\nRESULTADOS DEL ANÁLISIS (BÁSICO):")
                 print("=" * 50)
-                print("Nota: IA no disponible, análisis tradicional generado")
+                print("Nota: Ollama no disponible, análisis básico generado")
                 print("-" * 30)
-                print(analisis_tradicional)
+                print(analisis_basico)
                 print("=" * 50)
                 
-                return analisis_tradicional
+                return analisis_basico
 
         except Exception as e:
             logger.error(f"Error inesperado en análisis con IA: {str(e)}")
@@ -384,22 +384,20 @@ class SistemaVentasMain:
                 logger.error("Error en análisis estadístico")
                 return None
 
-            # 4. Ejecutar análisis con IA adaptativo
+            # 4. Ejecutar análisis con IA (Ollama)
             analisis_ia = self.ejecutar_analisis_ia()
             if analisis_ia:
                 resultados_analisis['analisis_ia'] = analisis_ia
                 # Incluir análisis de IA en datos para email
                 self.resumen_datos['analisis_ia'] = {
                     'disponible': True,
-                    'contenido': analisis_ia,
-                    'metodo_ia': self.ai_service.ai_method
+                    'contenido': analisis_ia
                 }
             else:
                 # Marcar como no disponible si no hay análisis de IA
                 self.resumen_datos['analisis_ia'] = {
                     'disponible': False,
-                    'contenido': 'Análisis con IA no disponible. Servicio adaptativo falló.',
-                    'metodo_ia': 'none'
+                    'contenido': 'Análisis con IA no disponible. Verifique que Ollama esté ejecutándose.'
                 }
 
             # 5. Generar reporte
@@ -438,23 +436,18 @@ class SistemaVentasMain:
             return None
 
     def mostrar_estado_ia(self) -> None:
-        """Muestra el estado del servicio de IA adaptativo"""
+        """Muestra el estado del servicio de Ollama"""
         try:
-            status_info = self.ai_service.get_status_info()
-            
             print("\n" + "="*50)
-            print("ESTADO DEL SERVICIO DE IA ADAPTATIVO")
+            print("ESTADO DEL SERVICIO DE OLLAMA")
             print("="*50)
-            print(f"Método de IA detectado: {status_info.get('ai_method', 'unknown')}")
-            print(f"Entorno: {status_info.get('environment', 'unknown')}")
-            print(f"Ollama configurado: {'✅' if status_info.get('ollama_configured') else '❌'}")
-            print(f"Ollama disponible: {'✅' if status_info.get('ollama_available') else '❌'}")
-            print(f"Gemini configurado: {'✅' if self.ai_service.gemini_api_key else '❌'}")
+            print(f"Ollama URL: {self.ai_service.ollama_url}")
+            print(f"Modelo: {self.ai_service.ollama_model}")
             print("="*50)
             
         except Exception as e:
-            logger.error(f"Error al mostrar estado de IA: {e}")
-            print(f"Error al obtener estado de IA: {e}")
+            logger.error(f"Error al mostrar estado de Ollama: {e}")
+            print(f"Error al obtener estado de Ollama: {e}")
 
 
 # =============================================================================
