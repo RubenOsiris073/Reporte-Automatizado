@@ -40,15 +40,15 @@ class AdaptiveAIService:
             self.logger.info(f"Usando Ollama: {self.ollama_url}")
             return 'ollama'
         
-        # 2. Verificar Google Gemini (GRATIS y generoso)
-        if self.gemini_api_key:
-            self.logger.info("Usando Google Gemini API")
-            return 'gemini'
-        
-        # 3. Verificar OpenAI
+        # 2. Verificar OpenAI (más confiable en Railway)
         if self.openai_api_key:
             self.logger.info("Usando OpenAI API")
             return 'openai'
+        
+        # 3. Verificar Google Gemini (puede tener problemas en Railway)
+        if self.gemini_api_key:
+            self.logger.info("Usando Google Gemini API")
+            return 'gemini'
         
         # 4. Verificar Anthropic
         if self.anthropic_api_key:
@@ -166,15 +166,31 @@ class AdaptiveAIService:
                     'model_used': 'gpt-3.5-turbo'
                 })
             else:
-                raise Exception(f"Error OpenAI: {response.status_code}")
+                raise Exception(f"Error OpenAI HTTP {response.status_code}: {response.text}")
                 
+        except requests.exceptions.Timeout:
+            self.logger.error("Timeout conectando con OpenAI API")
+            base.update({
+                'status': 'error',
+                'ai_available': False,
+                'analysis': self._generar_insights_basicos(datos),
+                'error': 'OpenAI API timeout - usando análisis tradicional'
+            })
+        except requests.exceptions.ConnectionError:
+            self.logger.error("Error de conexión con OpenAI API")
+            base.update({
+                'status': 'error',
+                'ai_available': False,
+                'analysis': self._generar_insights_basicos(datos),
+                'error': 'OpenAI API unavailable - usando análisis tradicional'
+            })
         except Exception as e:
             self.logger.error(f"Error OpenAI: {e}")
             base.update({
                 'status': 'error',
                 'ai_available': False,
                 'analysis': self._generar_insights_basicos(datos),
-                'error': str(e)
+                'error': f'OpenAI error: {str(e)} - usando análisis tradicional'
             })
         
         return base
@@ -202,7 +218,7 @@ class AdaptiveAIService:
             response = requests.post(
                 url,
                 json=payload,
-                timeout=self.timeout
+                timeout=20  # Reducir timeout para fallar más rápido
             )
             
             if response.status_code == 200:
@@ -220,15 +236,31 @@ class AdaptiveAIService:
                 else:
                     raise Exception("No se recibió respuesta válida de Gemini")
             else:
-                raise Exception(f"Error Gemini: {response.status_code} - {response.text}")
+                raise Exception(f"Error Gemini HTTP {response.status_code}: {response.text}")
                 
+        except requests.exceptions.Timeout:
+            self.logger.error("Timeout conectando con Gemini API")
+            base.update({
+                'status': 'error',
+                'ai_available': False,
+                'analysis': self._generar_insights_basicos(datos),
+                'error': 'Gemini API timeout - usando análisis tradicional'
+            })
+        except requests.exceptions.ConnectionError:
+            self.logger.error("Error de conexión con Gemini API")
+            base.update({
+                'status': 'error',
+                'ai_available': False,
+                'analysis': self._generar_insights_basicos(datos),
+                'error': 'Gemini API unavailable - usando análisis tradicional'
+            })
         except Exception as e:
             self.logger.error(f"Error Gemini: {e}")
             base.update({
                 'status': 'error',
                 'ai_available': False,
                 'analysis': self._generar_insights_basicos(datos),
-                'error': str(e)
+                'error': f'Gemini error: {str(e)} - usando análisis tradicional'
             })
         
         return base
