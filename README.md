@@ -1,11 +1,19 @@
-# 📊 Sistema Empresarial de Análisis de Ventas
+# 📊 Sistema Empresarial de Análisis de Ventas v3.0
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://python.org)
 [![Architecture](https://img.shields.io/badge/Architecture-Clean%20Architecture-green.svg)](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
 [![SOLID](https://img.shields.io/badge/Principles-SOLID-orange.svg)](https://en.wikipedia.org/wiki/SOLID)
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)](/)
 
-Sistema profesional de análisis de datos de ventas con **arquitectura modular**, implementando **Clean Architecture**, principios **SOLID** y mejores prácticas de desarrollo de software empresarial.
+Sistema profesional de análisis de datos de ventas con **arquitectura modular**, implementando **Clean Architecture** y principios **SOLID** con **reportes automáticos por email**.
+
+## 🚀 Características Principales
+
+### 📧 Reportes Automáticos por Email
+- **Envío automático** de reportes por email con **templates HTML profesionales**
+- **Análisis estadístico avanzado** con gráficos y métricas
+- **Templates responsive** optimizados para email
+- **Configuración simple** con variables de entorno
 
 ## ⚙️ Configuración Rápida
 
@@ -215,6 +223,35 @@ if sheets_service.conectar_sheets("DB_sales"):
     # El email se envía automáticamente con template HTML profesional
     email_service.enviar_reporte_automatico(resumen)
 ```
+
+## 🚀 Deployment en Railway
+
+### **Deploy en la Nube**
+Este proyecto está optimizado para deployment en [Railway](https://railway.app):
+
+```bash
+# 1. Commitea los cambios
+git add .
+git commit -m "Deploy to Railway"
+git push origin main
+
+# 2. Conecta en railway.app
+# 3. Configura las variables de entorno
+```
+
+📖 **Guía completa**: Ver [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md)
+
+### **Variables de Entorno Requeridas**
+```env
+SMTP_SERVER=smtp-relay.brevo.com
+SMTP_USER=tu_usuario_brevo
+SMTP_PASSWORD=tu_password_brevo
+FROM_EMAIL=tu_email@dominio.com
+TO_EMAIL=destinatario@email.com
+GOOGLE_CREDENTIALS_JSON={"type":"service_account",...}
+```
+
+⚠️ **Importante**: Para `GOOGLE_CREDENTIALS_JSON`, copia el contenido completo de `credentials.json` como string JSON.
 
 ## ⚙️ Configuración Avanzada
 

@@ -2,34 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 SISTEMA EMPRESARIAL DE ANÁLISIS DE VENTAS
-Análisis profesional de rendimiento comercial
-"""
-
-import subprocess
-import time
-import os
-import requests
-import json
-import pandas as pd
-import numpy as np
-import psutil
-from datetime import datetime, timedelta
-import gspread
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
-from google.oauth2.service_account import Credentials
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-SISTEMA EMPRESARIAL DE ANÁLISIS DE VENTAS
-Análisis profesional de rendimiento comercial
+Análisis profesional de rendimiento comercial con soporte para Railway
 """
 
 import subprocess
@@ -44,10 +17,14 @@ from dotenv import load_dotenv
 import logging
 import smtplib
 import io
+import gspread
 from datetime import datetime, timedelta
 from pathlib import Path
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+from google.oauth2.service_account import Credentials
+from credentials_manager import CredentialsManager
 from email.mime.application import MIMEApplication
 from google.oauth2.service_account import Credentials
 
@@ -174,6 +151,7 @@ class SheetsManager:
         self.gc = None
         self.sheet = None
         self.df = None
+        self.temp_credentials_file = None
 
     def conectar_sheets(self, nombre_hoja):
         """Establecer conexión con la base de datos"""
@@ -184,8 +162,12 @@ class SheetsManager:
                 'https://www.googleapis.com/auth/drive'
             ]
 
+            # Usar el nuevo sistema de credenciales
+            credentials_path = CredentialsManager.get_credentials_path()
+            self.temp_credentials_file = credentials_path
+
             creds = Credentials.from_service_account_file(
-                'credentials.json',
+                credentials_path,
                 scopes=scope
             )
 
@@ -193,8 +175,14 @@ class SheetsManager:
             self.sheet = self.gc.open(nombre_hoja).sheet1
             return True
 
-        except Exception:
+        except Exception as e:
+            logging.error(f"Error conectando a Google Sheets: {e}")
             return False
+    
+    def __del__(self):
+        """Limpieza automática del archivo temporal"""
+        if hasattr(self, 'temp_credentials_file'):
+            CredentialsManager.cleanup_temp_file(self.temp_credentials_file)
 
     def cargar_datos(self):
         """Cargar datos desde la base de datos"""
@@ -489,9 +477,15 @@ Utiliza enfoque empresarial y terminología profesional."""
             print(f"\nReporte generado: {archivo_reporte}")
 
             # ENVÍO AUTOMÁTICO POR EMAIL
-            print("\nEnviando reporte automáticamente...")
+            print("\nEnviando reporte por email...")
             email_manager = EmailManager()
-            email_manager.enviar_reporte_automatico(datos_ia, archivo_reporte)
+            email_enviado = email_manager.enviar_reporte_automatico(datos_ia, archivo_reporte)
+
+            # Resumen de envío
+            print("\n" + "="*50)
+            print("RESUMEN DE ENVÍO:")
+            print(f"📧 Email: {'✅ Enviado exitosamente' if email_enviado else '❌ Error en envío'}")
+            print("="*50)
 
             print("ANÁLISIS EMPRESARIAL COMPLETADO")
             return analyzer
@@ -509,8 +503,8 @@ Utiliza enfoque empresarial y terminología profesional."""
 
 if __name__ == "__main__":
     print("SISTEMA DE ANÁLISIS EMPRESARIAL v3.0")
-    print("Email automático integrado")
-    print(f"Reportes enviados desde: {SMTP_CONFIG['from_email']}")
+    print("� Email automático integrado")
+    print(f"📧 Reportes enviados desde: {SMTP_CONFIG['from_email']}")
     print()
 
     resultado = analisis_empresarial("DB_sales")

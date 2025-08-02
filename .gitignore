@@ -1,5 +1,15 @@
-# Variables de entorno
+# Variables de entorno y credenciales
 .env
+.env.local
+.env.railway
+credentials.json
+*.pem
+*.key
+RAILWAY_VARIABLES.txt
+
+# Archivos temporales de Railway
+temp_*
+railway-temp-*
 
 # Python
 __pycache__/
