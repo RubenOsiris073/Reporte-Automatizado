@@ -19,9 +19,7 @@ class AdaptiveAIService:
         self.ollama_url = os.getenv('OLLAMA_URL', '')
         self.ollama_model = os.getenv('OLLAMA_MODEL', 'qwen2.5:latest')
         
-        # APIs alternativas
-        self.openai_api_key = os.getenv('OPENAI_API_KEY', '')
-        self.anthropic_api_key = os.getenv('ANTHROPIC_API_KEY', '')
+        # API de respaldo - solo Gemini
         self.gemini_api_key = os.getenv('GEMINI_API_KEY', '')
         
         # Configuración
@@ -33,30 +31,20 @@ class AdaptiveAIService:
         self.ai_method = self._detectar_metodo_ia()
         
     def _detectar_metodo_ia(self) -> str:
-        """Detecta qué método de IA está disponible"""
+        """Detecta qué método de IA está disponible: Ollama o Gemini"""
         
-        # 1. Verificar Ollama (local o remoto)
+        # 1. Verificar Ollama (local o remoto) - PRIORIDAD
         if self.ollama_url and self._verificar_ollama():
             self.logger.info(f"Usando Ollama: {self.ollama_url}")
             return 'ollama'
         
-        # 2. Verificar OpenAI (más confiable en Railway)
-        if self.openai_api_key:
-            self.logger.info("Usando OpenAI API")
-            return 'openai'
-        
-        # 3. Verificar Google Gemini (puede tener problemas en Railway)
+        # 2. Si Ollama no está disponible, usar Gemini
         if self.gemini_api_key:
-            self.logger.info("Usando Google Gemini API")
+            self.logger.info("Ollama no disponible, usando Google Gemini API")
             return 'gemini'
         
-        # 4. Verificar Anthropic
-        if self.anthropic_api_key:
-            self.logger.info("Usando Anthropic API")
-            return 'anthropic'
-        
-        # 4. Fallback a análisis tradicional
-        self.logger.warning("No hay IA disponible, usando análisis tradicional")
+        # 3. Fallback a análisis tradicional
+        self.logger.warning("Ni Ollama ni Gemini disponibles, usando análisis tradicional")
         return 'traditional'
     
     def _verificar_ollama(self) -> bool:
@@ -68,7 +56,7 @@ class AdaptiveAIService:
             return False
     
     def generar_analisis_ia(self, datos_ventas: Dict[str, Any]) -> Dict[str, Any]:
-        """Genera análisis usando el método de IA disponible"""
+        """Genera análisis usando Ollama o Gemini como respaldo"""
         
         resultado_base = {
             'timestamp': datetime.now().isoformat(),
@@ -81,10 +69,6 @@ class AdaptiveAIService:
             return self._analisis_ollama(datos_ventas, resultado_base)
         elif self.ai_method == 'gemini':
             return self._analisis_gemini(datos_ventas, resultado_base)
-        elif self.ai_method == 'openai':
-            return self._analisis_openai(datos_ventas, resultado_base)
-        elif self.ai_method == 'anthropic':
-            return self._analisis_anthropic(datos_ventas, resultado_base)
         else:
             return self._analisis_tradicional(datos_ventas, resultado_base)
     
@@ -124,73 +108,6 @@ class AdaptiveAIService:
                 'ai_available': False,
                 'analysis': self._generar_insights_basicos(datos),
                 'error': str(e)
-            })
-        
-        return base
-    
-    def _analisis_openai(self, datos: Dict, base: Dict) -> Dict:
-        """Análisis con OpenAI GPT (alternativa para Railway)"""
-        try:
-            prompt = self._generar_prompt(datos)
-            
-            headers = {
-                'Authorization': f'Bearer {self.openai_api_key}',
-                'Content-Type': 'application/json'
-            }
-            
-            payload = {
-                "model": "gpt-3.5-turbo",
-                "messages": [
-                    {"role": "system", "content": "Eres un analista empresarial experto en ventas."},
-                    {"role": "user", "content": prompt}
-                ],
-                "max_tokens": 800,
-                "temperature": 0.3
-            }
-            
-            response = requests.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers=headers,
-                json=payload,
-                timeout=self.timeout
-            )
-            
-            if response.status_code == 200:
-                resultado = response.json()
-                contenido = resultado['choices'][0]['message']['content']
-                
-                base.update({
-                    'status': 'success',
-                    'ai_available': True,
-                    'analysis': contenido,
-                    'model_used': 'gpt-3.5-turbo'
-                })
-            else:
-                raise Exception(f"Error OpenAI HTTP {response.status_code}: {response.text}")
-                
-        except requests.exceptions.Timeout:
-            self.logger.error("Timeout conectando con OpenAI API")
-            base.update({
-                'status': 'error',
-                'ai_available': False,
-                'analysis': self._generar_insights_basicos(datos),
-                'error': 'OpenAI API timeout - usando análisis tradicional'
-            })
-        except requests.exceptions.ConnectionError:
-            self.logger.error("Error de conexión con OpenAI API")
-            base.update({
-                'status': 'error',
-                'ai_available': False,
-                'analysis': self._generar_insights_basicos(datos),
-                'error': 'OpenAI API unavailable - usando análisis tradicional'
-            })
-        except Exception as e:
-            self.logger.error(f"Error OpenAI: {e}")
-            base.update({
-                'status': 'error',
-                'ai_available': False,
-                'analysis': self._generar_insights_basicos(datos),
-                'error': f'OpenAI error: {str(e)} - usando análisis tradicional'
             })
         
         return base
@@ -261,56 +178,6 @@ class AdaptiveAIService:
                 'ai_available': False,
                 'analysis': self._generar_insights_basicos(datos),
                 'error': f'Gemini error: {str(e)} - usando análisis tradicional'
-            })
-        
-        return base
-    
-    def _analisis_anthropic(self, datos: Dict, base: Dict) -> Dict:
-        """Análisis con Claude (Anthropic)"""
-        try:
-            prompt = self._generar_prompt(datos)
-            
-            headers = {
-                'x-api-key': self.anthropic_api_key,
-                'Content-Type': 'application/json',
-                'anthropic-version': '2023-06-01'
-            }
-            
-            payload = {
-                "model": "claude-3-haiku-20240307",
-                "max_tokens": 800,
-                "messages": [
-                    {"role": "user", "content": prompt}
-                ]
-            }
-            
-            response = requests.post(
-                "https://api.anthropic.com/v1/messages",
-                headers=headers,
-                json=payload,
-                timeout=self.timeout
-            )
-            
-            if response.status_code == 200:
-                resultado = response.json()
-                contenido = resultado['content'][0]['text']
-                
-                base.update({
-                    'status': 'success',
-                    'ai_available': True,
-                    'analysis': contenido,
-                    'model_used': 'claude-3-haiku'
-                })
-            else:
-                raise Exception(f"Error Anthropic: {response.status_code}")
-                
-        except Exception as e:
-            self.logger.error(f"Error Anthropic: {e}")
-            base.update({
-                'status': 'error',
-                'ai_available': False,
-                'analysis': self._generar_insights_basicos(datos),
-                'error': str(e)
             })
         
         return base
@@ -406,8 +273,7 @@ Máximo 600 palabras, tono profesional, en español.
             'ai_method': self.ai_method,
             'environment': self.environment,
             'ollama_configured': bool(self.ollama_url),
-            'openai_configured': bool(self.openai_api_key),
-            'anthropic_configured': bool(self.anthropic_api_key),
+            'gemini_configured': bool(self.gemini_api_key),
             'ollama_available': self._verificar_ollama() if self.ollama_url else False
         }
 
