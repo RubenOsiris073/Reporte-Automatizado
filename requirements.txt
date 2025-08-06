@@ -8,6 +8,9 @@ Flask==2.3.3
 pandas==2.1.1
 numpy==1.24.3
 
+# Requests para APIs al modelo
+requests>=2.31.0
+
 # Integración con Google Sheets
 gspread==5.10.0
 google-auth==2.23.3
