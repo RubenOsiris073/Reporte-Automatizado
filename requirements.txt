@@ -5,7 +5,7 @@
 pandas>=1.5.0
 numpy>=1.21.0
 
-# Requests para APIs HTTP
+# Requests para APIs al modelo
 requests>=2.28.0
 
 # Monitoreo del sistema
