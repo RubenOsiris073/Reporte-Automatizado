@@ -47,7 +47,7 @@ class EmailService(EmailServiceInterface):
         """
         self.config = config or settings.email
         self._template_service = None
-        self._validate_configuration_on_init()
+        # self._validate_configuration_on_init()  # Desactivado temporalmente para evitar colgado
 
     def _validate_configuration_on_init(self):
         """Valida la configuración al inicializar."""

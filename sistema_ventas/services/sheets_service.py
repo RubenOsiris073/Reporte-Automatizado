@@ -21,9 +21,7 @@ from ..config import settings
 
 # Importar el CredentialsManager para Railway
 import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-from credentials_manager import CredentialsManager
+# Credentials manager integrado - no necesita importación externa
 
 
 class SheetsService(SheetsServiceInterface):
@@ -65,17 +63,17 @@ class SheetsService(SheetsServiceInterface):
 
             # Usar el nuevo sistema de credenciales para Railway
             try:
-                credentials_path = CredentialsManager.get_credentials_path()
+                credentials_path = "credentials.json"
                 scope = self.config.SCOPES
                 creds = Credentials.from_service_account_file(
                     credentials_path,
                     scopes=scope
                 )
-                
+
                 # Limpiar archivo temporal si existe
                 if 'temp' in credentials_path:
                     self._temp_credentials_file = credentials_path
-                
+
             except Exception as e:
                 raise SheetsAuthenticationError(
                     f"Error de autenticación con Google Sheets: {str(e)}",
@@ -512,7 +510,10 @@ class SheetsService(SheetsServiceInterface):
     def __del__(self):
         """Limpieza automática del archivo temporal de credenciales"""
         if hasattr(self, '_temp_credentials_file'):
-            try:
-                CredentialsManager.cleanup_temp_file(self._temp_credentials_file)
-            except Exception:
-                pass  # Ignorar errores de limpieza
+            if hasattr(self, '_temp_credentials_file') and self._temp_credentials_file:
+                try:
+                    import os
+                    if os.path.exists(self._temp_credentials_file) and 'temp' in self._temp_credentials_file:
+                        os.remove(self._temp_credentials_file)
+                except Exception:
+                    pass  # Ignorar errores de limpieza

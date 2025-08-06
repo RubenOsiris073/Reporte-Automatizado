@@ -12,9 +12,8 @@ from typing import Optional, Dict, Any
 import sys
 import os
 
-# Agregar el directorio padre al path para importar OllamaService
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ollama_service import OllamaService
+# Importar servicio de IA integrado
+from .services.ia_service import IAService, crear_servicio_ia, IAServiceError
 
 from .factories import ServiceFactory, get_complete_services
 from .core.exceptions import (
@@ -38,8 +37,8 @@ class SistemaVentasMain:
         self.services = None
         self.resumen_datos = {}
         self.analyzer_results = None
-        # Inicializar servicio de IA con Ollama
-        self.ai_service = OllamaService()
+        # Inicializar servicio de IA integrado
+        self.ai_service = crear_servicio_ia()
 
     @log_execution_time
     @handle_exceptions(SistemaVentasError)
@@ -202,44 +201,33 @@ class SistemaVentasMain:
                 logger.warning("No hay datos de resumen para análisis con IA")
                 return None
 
-            # Usar el servicio de Ollama
+            # Usar el servicio de IA integrado - SOLO OLLAMA
             resultado_ia = self.ai_service.generar_analisis_ia(self.resumen_datos)
-            
+
             if resultado_ia.get('status') == 'success':
                 analisis_ia = resultado_ia.get('analysis', '')
                 modelo_usado = resultado_ia.get('model_used', 'unknown')
-                
+
                 logger.info(f"Análisis con IA completado exitosamente usando {modelo_usado}")
 
                 # Mostrar resultados
                 print("\nRESULTADOS DEL ANÁLISIS ESTRATÉGICO:")
                 print("=" * 50)
-                print(f"Modelo usado: {modelo_usado}")
-                print("-" * 30)
                 print(analisis_ia)
                 print("=" * 50)
 
                 return analisis_ia
-            else:
-                # Si hay error, usar el análisis básico incluido
-                analisis_basico = resultado_ia.get('analysis', '')
-                error = resultado_ia.get('error', 'Error desconocido')
-                
-                logger.warning(f"Ollama no disponible ({error}), usando análisis básico")
-                
-                # Mostrar análisis básico
-                print("\nRESULTADOS DEL ANÁLISIS (BÁSICO):")
-                print("=" * 50)
-                print("Nota: Ollama no disponible, análisis básico generado")
-                print("-" * 30)
-                print(analisis_basico)
-                print("=" * 50)
-                
-                return analisis_basico
 
+            else:
+                logger.error("Error en análisis de IA - Ollama obligatorio")
+                raise IAServiceError("Análisis de IA falló - Ollama es obligatorio")
+
+        except IAServiceError:
+            # Re-raise errores de IA para que el sistema falle completamente
+            raise
         except Exception as e:
             logger.error(f"Error inesperado en análisis con IA: {str(e)}")
-            return None
+            raise IAServiceError(f"Error crítico en análisis de IA: {str(e)}")
 
     @log_execution_time
     def generar_reporte(self, analisis_ia: Optional[str] = None) -> str:
@@ -439,12 +427,20 @@ class SistemaVentasMain:
         """Muestra el estado del servicio de Ollama"""
         try:
             print("\n" + "="*50)
-            print("ESTADO DEL SERVICIO DE OLLAMA")
+            print("ESTADO DEL SERVICIO DE IA")
             print("="*50)
-            print(f"Ollama URL: {self.ai_service.ollama_url}")
-            print(f"Modelo: {self.ai_service.ollama_model}")
+            if self.ai_service:
+                estado = self.ai_service.obtener_estado()
+                print(f"Servicio disponible: {estado['servicio_disponible']}")
+                print(f"Ollama URL: {estado['ollama_url']}")
+                print(f"Modelo: {estado['modelo']}")
+                print(f"Timeout: {estado['timeout']}s")
+                if estado['ultima_verificacion']:
+                    print(f"Última verificación: {estado['ultima_verificacion']}")
+            else:
+                print("Servicio de IA no inicializado")
             print("="*50)
-            
+
         except Exception as e:
             logger.error(f"Error al mostrar estado de Ollama: {e}")
             print(f"Error al obtener estado de Ollama: {e}")

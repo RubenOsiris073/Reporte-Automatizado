@@ -5,8 +5,8 @@
 Flask==2.3.3
 
 # Análisis de datos y estadísticas
-pandas==2.1.1
-numpy==1.24.3
+pandas>=2.0.0
+numpy>=1.24.0
 
 # Requests para APIs al modelo
 requests>=2.31.0
